@@ -6,7 +6,7 @@ MODEL_ID = "souvik18/Roy-v1"
 
 HF_TOKEN = os.environ.get("HF_TOKEN")
 
-API_URL = f"https://router.huggingface.co/hf-inference/models/{MODEL_ID}"
+API_URL = f"https://router.huggingface.co/models/{MODEL_ID}"
 
 headers = {
     "Authorization": f"Bearer {HF_TOKEN}",
