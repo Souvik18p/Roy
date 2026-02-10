@@ -9,44 +9,49 @@ import uvicorn
 MODEL_ID = "souvik18/Roy-v1"
 HF_TOKEN = os.environ.get("HF_TOKEN")
 
-API_URL = f"https://router.huggingface.co/models/{MODEL_ID}"
+API_URL = "https://router.huggingface.co/v1/chat/completions"
 
 headers = {
     "Authorization": f"Bearer {HF_TOKEN}",
     "Content-Type": "application/json"
 }
 
-def chat(message, history):
-    prompt = f"[INST] {message} [/INST]"
+# ---------------- CHAT FUNCTION ----------------
 
+def chat(message, history):
     payload = {
-        "inputs": prompt,
-        "parameters": {
-            "max_new_tokens": 200,
-            "temperature": 0.7,
-            "top_p": 0.9
-        }
+        "model": MODEL_ID,
+        "messages": [
+            {"role": "user", "content": message}
+        ]
     }
 
-    r = requests.post(API_URL, headers=headers, json=payload, timeout=60)
+    try:
+        r = requests.post(API_URL, headers=headers, json=payload, timeout=60)
+    except Exception as e:
+        return f"Request failed: {str(e)}"
 
     if r.status_code != 200:
+        # Include full error so you can debug if something goes wrong
         return f"HTTP {r.status_code}: {r.text}"
 
     data = r.json()
-    if isinstance(data, dict) and "error" in data:
-        return f"HF Error: {data['error']}"
 
-    return data[0].get("generated_text", str(data))
+    # Extract the assistant (AI) response from the chat format
+    try:
+        return data["choices"][0]["message"]["content"]
+    except Exception:
+        return str(data)
 
-# ---------------- GRADIO ----------------
+# ---------------- GRADIO UI ----------------
 
-gradio_ui = gr.ChatInterface(fn=chat)
+gradio_ui = gr.ChatInterface(fn=chat, title="Roy-v1 by Souvik", description="Chat via HuggingFace Inference Providers")
 
 # ---------------- FASTAPI ----------------
 
 app = FastAPI()
 
+# Mount Gradio under "/"
 app = gr.mount_gradio_app(app, gradio_ui, path="/")
 
 if __name__ == "__main__":
