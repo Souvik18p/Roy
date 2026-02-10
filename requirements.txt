@@ -3,4 +3,5 @@ accelerate
 bitsandbytes
 torch
 gradio
+requests
 huggingface_hub
