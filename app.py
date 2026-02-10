@@ -2,8 +2,9 @@ import os
 import gradio as gr
 import requests
 
-MODEL_ID = "souvik18/Roy-v1"
+# ---------------- CONFIG ----------------
 
+MODEL_ID = "souvik18/Roy-v1"
 HF_TOKEN = os.environ.get("HF_TOKEN")
 
 API_URL = f"https://router.huggingface.co/models/{MODEL_ID}"
@@ -13,8 +14,9 @@ headers = {
     "Content-Type": "application/json"
 }
 
-def chat(message, history):
+# ---------------- CHAT FUNCTION ----------------
 
+def chat(message, history):
     prompt = f"[INST] {message} [/INST]"
 
     payload = {
@@ -31,8 +33,6 @@ def chat(message, history):
     except Exception as e:
         return f"Request failed: {str(e)}"
 
-    # ---- NEW SAFE LOGIC ----
-
     if r.status_code != 200:
         return f"HTTP {r.status_code}: {r.text}"
 
@@ -43,10 +43,8 @@ def chat(message, history):
 
     if isinstance(data, dict) and "error" in data:
         err = data["error"]
-
         if "loading" in str(err).lower():
             return "⏳ Roy is waking up... try again in 10 seconds."
-
         return f"HF Error: {err}"
 
     try:
@@ -54,6 +52,7 @@ def chat(message, history):
     except Exception:
         return str(data)
 
+# ---------------- GRADIO UI ----------------
 
 demo = gr.ChatInterface(
     fn=chat,
@@ -61,9 +60,12 @@ demo = gr.ChatInterface(
     description="Running via HuggingFace API"
 )
 
-port = int(os.environ.get("PORT", 7860))
+# ---------------- ENTRY POINT ----------------
 
-demo.launch(
-    server_name="0.0.0.0",
-    server_port=port
-)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 7860))
+
+    demo.launch(
+        server_name="0.0.0.0",
+        server_port=port
+    )
