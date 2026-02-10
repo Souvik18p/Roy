@@ -3,5 +3,7 @@ accelerate
 bitsandbytes
 torch
 gradio
+fastapi
+uvicorn
 requests
 huggingface_hub
