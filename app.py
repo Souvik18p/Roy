@@ -1,13 +1,15 @@
+import os
 import gradio as gr
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 import torch
 
 MODEL_ID = "souvik18/Roy-v1"
 
-# 4bit for low cost hosting
+print("Loading Roy-v1...")
+
+# 4-bit quantization (works on free CPU)
 bnb = BitsAndBytesConfig(load_in_4bit=True)
 
-print("Loading Roy-v1...")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_ID,
@@ -15,12 +17,16 @@ model = AutoModelForCausalLM.from_pretrained(
     device_map="auto"
 )
 
+# avoid pad warning
 model.generation_config.pad_token_id = tokenizer.eos_token_id
+
 
 def chat(message, history):
     prompt = f"[INST] {message} [/INST]"
 
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+    inputs = tokenizer(prompt, return_tensors="pt")
+
+    inputs = inputs.to(model.device)
 
     output = model.generate(
         **inputs,
@@ -44,4 +50,10 @@ demo = gr.ChatInterface(
     description="Personal AI Assistant"
 )
 
-demo.launch(server_name="0.0.0.0", server_port=7860)
+# ✅ RENDER PORT FIX
+port = int(os.environ.get("PORT", 7860))
+
+demo.launch(
+    server_name="0.0.0.0",
+    server_port=port
+)
