@@ -6,12 +6,11 @@ MODEL_ID = "souvik18/Roy-v1"
 
 HF_TOKEN = os.environ.get("HF_TOKEN")
 
-# ✅ CORRECT ENDPOINT FOR NORMAL LLM
-API_URL = f"https://router.huggingface.co/hf-inference/models/{MODEL_ID}"
+# ✅ OFFICIAL TEXT GENERATION ENDPOINT
+API_URL = f"https://api-inference.huggingface.co/models/{MODEL_ID}"
 
 headers = {
-    "Authorization": f"Bearer {HF_TOKEN}",
-    "Content-Type": "application/json"
+    "Authorization": f"Bearer {HF_TOKEN}"
 }
 
 def chat(message, history):
@@ -20,6 +19,9 @@ def chat(message, history):
 
     payload = {
         "inputs": prompt,
+        "options": {
+            "wait_for_model": True
+        },
         "parameters": {
             "max_new_tokens": 200,
             "temperature": 0.7,
@@ -29,7 +31,7 @@ def chat(message, history):
     }
 
     try:
-        r = requests.post(API_URL, headers=headers, json=payload, timeout=60)
+        r = requests.post(API_URL, headers=headers, json=payload, timeout=120)
     except Exception as e:
         return f"Request failed: {str(e)}"
 
@@ -38,12 +40,11 @@ def chat(message, history):
 
     data = r.json()
 
-    # Different models return different format
     try:
+        # HF normal generation format
         if isinstance(data, list):
             return data[0]["generated_text"]
-        else:
-            return str(data)
+        return str(data)
     except:
         return str(data)
 
@@ -51,7 +52,7 @@ def chat(message, history):
 demo = gr.ChatInterface(
     fn=chat,
     title="Roy-v1 by Souvik",
-    description="Text Generation Model"
+    description="Running via HuggingFace Inference"
 )
 
 port = int(os.environ.get("PORT", 10000))
