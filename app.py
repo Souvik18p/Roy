@@ -9,7 +9,8 @@ HF_TOKEN = os.environ.get("HF_TOKEN")
 API_URL = f"https://router.huggingface.co/hf-inference/models/{MODEL_ID}"
 
 headers = {
-    "Authorization": f"Bearer {HF_TOKEN}"
+    "Authorization": f"Bearer {HF_TOKEN}",
+    "Content-Type": "application/json"
 }
 
 def chat(message, history):
@@ -25,12 +26,37 @@ def chat(message, history):
         }
     }
 
-    r = requests.post(API_URL, headers=headers, json=payload)
-
     try:
-        return r.json()[0]["generated_text"]
-    except:
-        return str(r.json())
+        r = requests.post(API_URL, headers=headers, json=payload, timeout=60)
+    except Exception as e:
+        return f"Request failed: {str(e)}"
+
+    # ---- SAFE RESPONSE HANDLING ----
+
+    # 1. HTTP error
+    if r.status_code != 200:
+        return f"HTTP {r.status_code}: {r.text}"
+
+    # 2. Try to parse JSON
+    try:
+        data = r.json()
+    except Exception:
+        return f"Non-JSON response from HF: {r.text}"
+
+    # 3. Model loading case
+    if isinstance(data, dict) and "error" in data:
+        err = data["error"]
+
+        if "loading" in err.lower():
+            return "⏳ Roy is waking up... please try again in 10 seconds."
+
+        return f"HF Error: {err}"
+
+    # 4. Normal output extraction
+    try:
+        return data[0]["generated_text"]
+    except Exception:
+        return str(data)
 
 
 demo = gr.ChatInterface(
