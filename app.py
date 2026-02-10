@@ -1,6 +1,8 @@
 import os
-import gradio as gr
 import requests
+import gradio as gr
+from fastapi import FastAPI
+import uvicorn
 
 # ---------------- CONFIG ----------------
 
@@ -14,8 +16,6 @@ headers = {
     "Content-Type": "application/json"
 }
 
-# ---------------- CHAT FUNCTION ----------------
-
 def chat(message, history):
     prompt = f"[INST] {message} [/INST]"
 
@@ -28,44 +28,27 @@ def chat(message, history):
         }
     }
 
-    try:
-        r = requests.post(API_URL, headers=headers, json=payload, timeout=60)
-    except Exception as e:
-        return f"Request failed: {str(e)}"
+    r = requests.post(API_URL, headers=headers, json=payload, timeout=60)
 
     if r.status_code != 200:
         return f"HTTP {r.status_code}: {r.text}"
 
-    try:
-        data = r.json()
-    except Exception:
-        return f"Non-JSON response: {r.text}"
-
+    data = r.json()
     if isinstance(data, dict) and "error" in data:
-        err = data["error"]
-        if "loading" in str(err).lower():
-            return "⏳ Roy is waking up... try again in 10 seconds."
-        return f"HF Error: {err}"
+        return f"HF Error: {data['error']}"
 
-    try:
-        return data[0]["generated_text"]
-    except Exception:
-        return str(data)
+    return data[0].get("generated_text", str(data))
 
-# ---------------- GRADIO UI ----------------
+# ---------------- GRADIO ----------------
 
-demo = gr.ChatInterface(
-    fn=chat,
-    title="Roy-v1 by Souvik",
-    description="Running via HuggingFace API"
-)
+gradio_ui = gr.ChatInterface(fn=chat)
 
-# ---------------- ENTRY POINT ----------------
+# ---------------- FASTAPI ----------------
+
+app = FastAPI()
+
+app = gr.mount_gradio_app(app, gradio_ui, path="/")
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 7860))
-
-    demo.launch(
-        server_name="0.0.0.0",
-        server_port=port
-    )
+    port = int(os.environ.get("PORT", 10000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
