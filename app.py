@@ -31,28 +31,24 @@ def chat(message, history):
     except Exception as e:
         return f"Request failed: {str(e)}"
 
-    # ---- SAFE RESPONSE HANDLING ----
+    # ---- NEW SAFE LOGIC ----
 
-    # 1. HTTP error
     if r.status_code != 200:
         return f"HTTP {r.status_code}: {r.text}"
 
-    # 2. Try to parse JSON
     try:
         data = r.json()
     except Exception:
-        return f"Non-JSON response from HF: {r.text}"
+        return f"Non-JSON response: {r.text}"
 
-    # 3. Model loading case
     if isinstance(data, dict) and "error" in data:
         err = data["error"]
 
-        if "loading" in err.lower():
-            return "⏳ Roy is waking up... please try again in 10 seconds."
+        if "loading" in str(err).lower():
+            return "⏳ Roy is waking up... try again in 10 seconds."
 
         return f"HF Error: {err}"
 
-    # 4. Normal output extraction
     try:
         return data[0]["generated_text"]
     except Exception:
