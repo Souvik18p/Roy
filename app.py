@@ -6,11 +6,12 @@ MODEL_ID = "souvik18/Roy-v1"
 
 HF_TOKEN = os.environ.get("HF_TOKEN")
 
-# ✅ OFFICIAL TEXT GENERATION ENDPOINT
-API_URL = f"https://api-inference.huggingface.co/models/{MODEL_ID}"
+# ✅ CORRECT ROUTER ENDPOINT FOR TEXT MODELS
+API_URL = f"https://router.huggingface.co/hf-inference/models/{MODEL_ID}"
 
 headers = {
-    "Authorization": f"Bearer {HF_TOKEN}"
+    "Authorization": f"Bearer {HF_TOKEN}",
+    "Content-Type": "application/json"
 }
 
 def chat(message, history):
@@ -19,14 +20,18 @@ def chat(message, history):
 
     payload = {
         "inputs": prompt,
+
         "options": {
-            "wait_for_model": True
+            "wait_for_model": True,
+            "use_cache": False
         },
+
         "parameters": {
             "max_new_tokens": 200,
             "temperature": 0.7,
             "top_p": 0.9,
-            "do_sample": True
+            "do_sample": True,
+            "return_full_text": False
         }
     }
 
@@ -41,18 +46,17 @@ def chat(message, history):
     data = r.json()
 
     try:
-        # HF normal generation format
         if isinstance(data, list):
-            return data[0]["generated_text"]
+            return data[0].get("generated_text", str(data[0]))
         return str(data)
-    except:
-        return str(data)
+    except Exception as e:
+        return f"Parse error: {str(e)} | Raw: {data}"
 
 
 demo = gr.ChatInterface(
     fn=chat,
     title="Roy-v1 by Souvik",
-    description="Running via HuggingFace Inference"
+    description="Running via HuggingFace Router Inference"
 )
 
 port = int(os.environ.get("PORT", 10000))
